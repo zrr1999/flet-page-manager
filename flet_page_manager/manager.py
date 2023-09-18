@@ -4,6 +4,7 @@ from flet import AppView
 import asyncio
 from typing import TYPE_CHECKING, TypeVar, Generic
 from loguru import logger
+import sys
 from .exception import PageException
 
 if TYPE_CHECKING:
@@ -27,9 +28,6 @@ class PageManager(Generic[StateT]):
 
     @staticmethod
     def set_level(level: str | int):
-        # TODO: enum
-        import sys
-
         logger.remove(0)
         logger.add(sys.stdout, level=level)
 
