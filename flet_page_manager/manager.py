@@ -8,6 +8,7 @@ from .exception import PageException
 
 if TYPE_CHECKING:
     from .pages import PageBase
+
     StateT = TypeVar("StateT")
 
 
@@ -33,7 +34,11 @@ class PageManager(Generic[StateT]):
         logger.add(sys.stdout, level=level)
 
     def __init__(
-        self, *, view: AppView = AppView.FLET_APP, assets_dir: str = "public", state: StateT|None = None
+        self,
+        *,
+        view: AppView = AppView.FLET_APP,
+        assets_dir: str = "public",
+        state: StateT | None = None,
     ) -> None:
         self.state = state
         self.page_count: int = 0

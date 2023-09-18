@@ -1,5 +1,3 @@
 from .base import PageBase
 
-__all__ = [
-    "PageBase"
-]
+__all__ = ["PageBase"]
