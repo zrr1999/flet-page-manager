@@ -41,6 +41,7 @@ class PageManager(Generic[StateT]):
         self.state = state
         self.page_count: int = 0
         self.page_tasks: list[asyncio.Task] = []
+        self.background_tasks: list[asyncio.Task] = []
 
         self.view: AppView = view
         self.assets_dir = assets_dir
@@ -54,12 +55,22 @@ class PageManager(Generic[StateT]):
                     if task.done():
                         self.page_count -= 1
                         self.page_tasks.remove(task)
+                        await task
+
+                for task in self.background_tasks:
+                    if task.done():
+                        self.background_tasks.remove(task)
+                        await task
+
             except KeyboardInterrupt:
                 for task in self.page_tasks:
                     task.cancel()
-                    print("PageManager: Page task canceled")
-                    await task
+                    self.logger.info("PageManager: Page task canceled")
                 break
+
+        for task in self.background_tasks:
+            task.cancel()
+            self.logger.info("PageManager: Background task canceled")
 
     def open_page(self, name: str, *, port: int = 0):
         if name not in PageManager.page_mapping:
