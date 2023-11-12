@@ -1,22 +1,30 @@
-[tool.ruff]
-select = ["UP"]
-ignore = ["UP015"]
-target-version = "py38"
-
 [project]
-name = "FletPageManager"
-version = "0.1.1"
+name = "flet-page-manager"
+version = "0.1.0"
 description = "Flet Page Manager"
 readme = "README.md"
 authors = [
     {name = "Zhan Rongrui", email = "2742392377@qq.com"},
 ]
 dependencies = [
-    "flet>=0.10.1",
+    "flet>=0.9.0",
     "loguru>=0.7.2",
 ]
 requires-python = ">=3.10"
 license = {text = "MIT"}
+
+[tool.ruff]
+select = ["UP"]
+ignore = ["UP015"]
+target-version = "py38"
+
+[tool.pdm.build]
+excludes = ["./**/.git"]
+includes = [
+    "page_manager",
+]
+source-includes = ["README.md"]
+editable-backend = "path"
 
 [build-system]
 requires = ["pdm-backend"]
