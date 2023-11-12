@@ -1,6 +1,6 @@
 [project]
 name = "flet-page-manager"
-version = "0.1.0"
+version = "0.1.1"
 description = "Flet Page Manager"
 readme = "README.md"
 authors = [

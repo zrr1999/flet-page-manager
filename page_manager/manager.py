@@ -2,7 +2,7 @@ from __future__ import annotations
 import flet as ft
 from flet import AppView
 import asyncio
-from typing import TYPE_CHECKING, TypeVar, Generic
+from typing import TYPE_CHECKING, TypeVar
 from loguru import logger
 import sys
 from .exception import PageException
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     StateT = TypeVar("StateT")
 
 
-class PageManager(Generic[StateT]):
+class PageManager:
     logger = logger
 
     page_mapping: dict[str, type[PageBase]] = {}
@@ -36,9 +36,8 @@ class PageManager(Generic[StateT]):
         *,
         view: AppView = AppView.FLET_APP,
         assets_dir: str = "public",
-        state: StateT | None = None,
+        state=None,
     ) -> None:
-        self.state = state
         self.page_count: int = 0
         self.page_tasks: list[asyncio.Task] = []
         self.background_tasks: list[asyncio.Task] = []
