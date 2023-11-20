@@ -5,6 +5,7 @@ from ..manager import PageManager
 
 class PageBase:
     async def init(self, page: ft.Page, pm: PageManager):
+        pm.state.running_pages.append(page)
         await page.window_center_async()
 
     async def build(self, page: ft.Page, pm: PageManager):

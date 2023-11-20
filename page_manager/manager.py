@@ -6,14 +6,13 @@ from typing import TYPE_CHECKING, TypeVar
 from loguru import logger
 import sys
 from .exception import PageException
+from .state import StateBase
 
 if TYPE_CHECKING:
     from .pages import PageBase
 
-    StateT = TypeVar("StateT")
 
-
-class PageManager:
+class PageManager[StateT: StateBase]:
     logger = logger
 
     page_mapping: dict[str, type[PageBase]] = {}
@@ -33,11 +32,12 @@ class PageManager:
 
     def __init__(
         self,
+        state: StateT,
         *,
         view: AppView = AppView.FLET_APP,
         assets_dir: str = "public",
-        state=None,
     ) -> None:
+        self.state = state
         self.page_count: int = 0
         self.page_tasks: list[asyncio.Task] = []
         self.background_tasks: list[asyncio.Task] = []
@@ -70,6 +70,10 @@ class PageManager:
         for task in self.background_tasks:
             task.cancel()
             self.logger.info("PageManager: Background task canceled")
+
+    async def close(self):
+        for p in self.state.running_pages:
+            await p.window_destroy_async()
 
     def open_page(self, name: str, *, port: int = 0):
         if name not in PageManager.page_mapping:

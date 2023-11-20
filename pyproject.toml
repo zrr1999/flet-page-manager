@@ -1,6 +1,6 @@
 [project]
 name = "flet-page-manager"
-version = "0.1.1"
+dynamic = ["version"]
 description = "Flet Page Manager"
 readme = "README.md"
 authors = [
@@ -13,19 +13,24 @@ dependencies = [
 requires-python = ">=3.10"
 license = {text = "MIT"}
 
+[project.urls]
+Homepage = "https://pypi.org/project/flet-page-manager"
+Repository = "https://github.com/zrr1999/flet-page-manager"
+
 [tool.ruff]
 select = ["UP"]
 ignore = ["UP015"]
 target-version = "py38"
+
+[tool.pdm.version]
+source = "scm"
 
 [tool.pdm.build]
 excludes = ["./**/.git"]
 includes = [
     "page_manager",
 ]
-source-includes = ["README.md"]
-editable-backend = "path"
 
 [build-system]
-requires = ["pdm-backend"]
+requires = ["pdm-backend", "pdm-pyfuture"]
 build-backend = "pdm.backend"
