@@ -8,4 +8,4 @@ class Config:
 
 @dataclasses.dataclass(config=Config)
 class StateBase:
-    running_pages: list[ft.Page] = dataclasses.Field(default_factory=dict)
+    running_pages: list[ft.Page] = dataclasses.Field(default_factory=list)
