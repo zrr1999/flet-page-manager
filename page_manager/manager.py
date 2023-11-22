@@ -7,9 +7,7 @@ from loguru import logger
 import sys
 from .exception import PageException
 from .state import StateBase
-
-if TYPE_CHECKING:
-    from .pages import PageBase
+from .pages import PageBase
 
 
 class PageManager[StateT: StateBase]:

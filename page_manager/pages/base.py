@@ -1,10 +1,10 @@
 from __future__ import annotations
 import flet as ft
 from typing import TYPE_CHECKING
+from ..state import StateBase
 
 if TYPE_CHECKING:
     from ..manager import PageManager
-    from ..state import StateBase
 
 
 class PageBase[StateT: StateBase]:
