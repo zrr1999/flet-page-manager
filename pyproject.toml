@@ -14,7 +14,7 @@ requires-python = ">=3.10"
 license = {text = "MIT"}
 
 [project.urls]
-Homepage = "https://pypi.org/project/flet-page-manager"
+Homepage = "https://github.com/zrr1999/flet-page-manager"
 Repository = "https://github.com/zrr1999/flet-page-manager"
 
 [tool.ruff]
