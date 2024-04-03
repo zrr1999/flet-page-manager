@@ -1,13 +1,15 @@
 from __future__ import annotations
+
+import asyncio
+import sys
+
 import flet as ft
 from flet import AppView
-import asyncio
-from typing import TYPE_CHECKING, TypeVar
 from loguru import logger
-import sys
+
 from .exception import PageException
-from .state import StateBase
 from .pages import PageBase
+from .state import StateBase
 
 
 class PageManager[StateT: StateBase]:

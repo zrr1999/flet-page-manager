@@ -1,5 +1,7 @@
-from pydantic import dataclasses
+from __future__ import annotations
+
 import flet as ft
+from pydantic import dataclasses
 
 
 class Config:
