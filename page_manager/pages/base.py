@@ -11,13 +11,13 @@ if TYPE_CHECKING:
 
 
 class PageBase[StateT: StateBase]:
-    async def init(self, page: ft.Page, pm: PageManager[StateT]):
+    def init(self, page: ft.Page, pm: PageManager[StateT]):
         pm.state.running_pages.append(page)
-        await page.window_center_async()
+        page.window_center()
 
-    async def build(self, page: ft.Page, pm: PageManager[StateT]):
+    def build(self, page: ft.Page, pm: PageManager[StateT]):
         raise NotImplementedError
 
-    async def __call__(self, page: ft.Page, pm: PageManager[StateT]):
-        await self.init(page, pm)
-        await self.build(page, pm)
+    def __call__(self, page: ft.Page, pm: PageManager[StateT]):
+        self.init(page, pm)
+        self.build(page, pm)

@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from functools import partial
 
 import flet as ft
 from flet import AppView
 from loguru import logger
 
-from .exception import PageException
 from .pages import PageBase
 from .state import StateBase
+from .utils import get_free_port
 
 
 class PageManager[StateT: StateBase]:
@@ -62,31 +63,32 @@ class PageManager[StateT: StateBase]:
                         await task
 
             except KeyboardInterrupt:
-                for task in self.page_tasks:
-                    task.cancel()
-                    self.logger.info("PageManager: Page task canceled")
                 break
 
+        for task in self.page_tasks:
+            task.cancel()
+            self.logger.info("PageManager: Page task canceled")
         for task in self.background_tasks:
             task.cancel()
             self.logger.info("PageManager: Background task canceled")
 
     async def close(self):
         for p in self.state.running_pages:
-            await p.window_destroy_async()
+            p.window_destroy()
 
     def open_page(self, name: str, *, port: int = 0):
         if name not in PageManager.page_mapping:
-            raise PageException(f"Page {name} not found")
+            logger.info(f"Page {name} not found")
+            return
+        if port == 0:
+            port = get_free_port()
+        logger.info(f"PageManager: Opening page {name} on port {port}")
         page_obj = PageManager.page_mapping[name]()
         self.page_count += 1
 
-        async def _page_func_async(page: ft.Page):
-            await page_obj(page, self)
-
         task = asyncio.create_task(
             ft.app_async(
-                target=_page_func_async,
+                target=partial(page_obj, pm=self),
                 view=self.view,
                 port=port,
                 assets_dir=self.assets_dir,
