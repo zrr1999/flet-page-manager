@@ -46,6 +46,19 @@ class PageManager[StateT: StateBase]:
         self.view: AppView = view
         self.assets_dir = assets_dir
 
+    async def cancel_tasks(self, tasks: list[asyncio.Task]):
+        for task in tasks:
+            if not task.done():
+                try:
+                    task.cancel()
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass
+                    self.logger.info("PageManager: Task canceled")
+                except Exception as e:
+                    self.logger.error(f"PageManager: Error canceling task - {e}")
+
     async def run(self, name: str, *, port: int = 0):
         self.open_page(name, port=port)
         while self.page_count > 0:
@@ -65,12 +78,9 @@ class PageManager[StateT: StateBase]:
             except KeyboardInterrupt:
                 break
 
-        for task in self.page_tasks:
-            task.cancel()
-            self.logger.info("PageManager: Page task canceled")
-        for task in self.background_tasks:
-            task.cancel()
-            self.logger.info("PageManager: Background task canceled")
+        await self.cancel_tasks(self.page_tasks)
+        await self.cancel_tasks(self.background_tasks)
+        self.logger.info("PageManager: All tasks have been canceled, exiting...")
 
     async def close(self):
         for p in self.state.running_pages:
@@ -78,11 +88,11 @@ class PageManager[StateT: StateBase]:
 
     def open_page(self, name: str, *, port: int = 0):
         if name not in PageManager.page_mapping:
-            logger.info(f"Page {name} not found")
+            logger.error(f"Page `{name}` not found")
             return
         if port == 0:
             port = get_free_port()
-        logger.info(f"PageManager: Opening page {name} on port {port}")
+        logger.info(f"PageManager: Opening page `{name}` on port {port}")
         page_obj = PageManager.page_mapping[name]()
         self.page_count += 1
 
