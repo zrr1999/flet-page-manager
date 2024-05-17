@@ -62,6 +62,9 @@ class PageManager[StateT: StateBase]:
     async def restart(self, name: str, *, port: int = 0):
         await self.cancel_tasks(self.page_tasks)
         await self.cancel_tasks(self.background_tasks)
+        self.page_count = 0
+        self.page_tasks = []
+        self.background_tasks = []
         await self.run(name, port=port)
 
     async def start(self, name: str, *, port: int = 0):
