@@ -59,6 +59,14 @@ class PageManager[StateT: StateBase]:
                 except Exception as e:
                     self.logger.error(f"PageManager: Error canceling task - {e}")
 
+    async def restart(self, name: str, *, port: int = 0):
+        await self.cancel_tasks(self.page_tasks)
+        await self.cancel_tasks(self.background_tasks)
+        await self.run(name, port=port)
+
+    async def start(self, name: str, *, port: int = 0):
+        await self.run(name, port=port)
+
     async def run(self, name: str, *, port: int = 0):
         self.open_page(name, port=port)
         while self.page_count > 0:
