@@ -1,13 +1,8 @@
 from __future__ import annotations
 
 import flet as ft
-from pydantic import dataclasses
+from pydantic import BaseModel, Field
 
 
-class Config:
-    arbitrary_types_allowed = True
-
-
-@dataclasses.dataclass(config=Config)
-class StateBase:
-    running_pages: list[ft.Page] = dataclasses.Field(default_factory=list)
+class StateBase(BaseModel, arbitrary_types_allowed=True):
+    running_pages: list[ft.Page] = Field(default_factory=list)

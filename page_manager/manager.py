@@ -15,7 +15,6 @@ from .utils import get_free_port
 
 class PageManager[StateT: StateBase]:
     logger = logger
-
     page_mapping: dict[str, type[PageBase]] = {}
 
     @staticmethod
@@ -43,7 +42,7 @@ class PageManager[StateT: StateBase]:
         self.page_tasks: list[asyncio.Task] = []
         self.background_tasks: list[asyncio.Task] = []
 
-        self.view: AppView = view
+        self.view = view
         self.assets_dir = assets_dir
 
     async def cancel_tasks(self, tasks: list[asyncio.Task]):
@@ -58,17 +57,6 @@ class PageManager[StateT: StateBase]:
                     self.logger.info("PageManager: Task canceled")
                 except Exception as e:
                     self.logger.error(f"PageManager: Error canceling task - {e}")
-
-    async def restart(self, name: str, *, port: int = 0):
-        await self.cancel_tasks(self.page_tasks)
-        await self.cancel_tasks(self.background_tasks)
-        self.page_count = 0
-        self.page_tasks = []
-        self.background_tasks = []
-        await self.run(name, port=port)
-
-    async def start(self, name: str, *, port: int = 0):
-        await self.run(name, port=port)
 
     async def run(self, name: str, *, port: int = 0):
         self.open_page(name, port=port)
@@ -93,10 +81,6 @@ class PageManager[StateT: StateBase]:
         await self.cancel_tasks(self.background_tasks)
         self.logger.info("PageManager: All tasks have been canceled, exiting...")
 
-    async def close(self):
-        for p in self.state.running_pages:
-            p.window_destroy()
-
     def open_page(self, name: str, *, port: int = 0):
         if name not in PageManager.page_mapping:
             logger.error(f"Page `{name}` not found")
@@ -116,3 +100,21 @@ class PageManager[StateT: StateBase]:
             )
         )
         self.page_tasks.append(task)
+
+    async def restart(self, name: str, *, port: int = 0):
+        # TODO
+        await self.cancel_tasks(self.page_tasks)
+        await self.cancel_tasks(self.background_tasks)
+        self.page_count = 0
+        self.page_tasks = []
+        self.background_tasks = []
+        await self.run(name, port=port)
+
+    async def start(self, name: str, *, port: int = 0):
+        # TODO
+        await self.run(name, port=port)
+
+    async def close(self):
+        # TODO
+        for p in self.state.running_pages:
+            p.window_destroy()

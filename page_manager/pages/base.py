@@ -16,7 +16,7 @@ class PageBase[StateT: StateBase]:
         page.window_center()
 
     def build(self, page: ft.Page, pm: PageManager[StateT]):
-        raise NotImplementedError
+        raise NotImplementedError("Page must implement build method")
 
     def __call__(self, page: ft.Page, pm: PageManager[StateT]):
         self.init(page, pm)

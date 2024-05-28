@@ -1,7 +1,7 @@
 [project]
 name = "flet-page-manager"
 dynamic = ["version"]
-description = "Flet Page Manager"
+description = "A simple window manager for Flet that allows you to easily build multi-window applications."
 readme = "README.md"
 authors = [
     {name = "Zhan Rongrui", email = "2742392377@qq.com"},
