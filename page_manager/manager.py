@@ -43,7 +43,7 @@ class PageManager[StateT: StateBase]:
         self.page_count: int = 0
         self.page_tasks: list[asyncio.Task] = []
         self.background_tasks: list[asyncio.Task] = []
-        self.loop = asyncio.get_running_loop()
+        self.loop = asyncio.new_event_loop()
         self.executor = ThreadPoolExecutor()
 
         self.view = view
