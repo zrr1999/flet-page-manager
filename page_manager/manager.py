@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
+from typing import Any, Awaitable, Callable
 
 import flet as ft
 from flet import AppView
@@ -41,9 +43,18 @@ class PageManager[StateT: StateBase]:
         self.page_count: int = 0
         self.page_tasks: list[asyncio.Task] = []
         self.background_tasks: list[asyncio.Task] = []
+        self.loop = asyncio.get_running_loop()
+        self.executor = ThreadPoolExecutor()
 
         self.view = view
         self.assets_dir = assets_dir
+
+    def run_task[OutputT](self, handler: Callable[..., Awaitable[OutputT]], *args):
+        assert asyncio.iscoroutinefunction(handler)
+        return asyncio.run_coroutine_threadsafe(handler(*args), self.loop)
+
+    def run_thread(self, handler: Callable[..., Any], *args):
+        self.loop.call_soon_threadsafe(self.loop.run_in_executor, self.executor, handler, *args)
 
     async def cancel_tasks(self, tasks: list[asyncio.Task]):
         for task in tasks:
