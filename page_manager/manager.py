@@ -10,6 +10,7 @@ import flet as ft
 from flet import AppView
 from loguru import logger
 
+from .exception import PageRestartException
 from .pages import PageBase
 from .state import StateBase
 from .utils import get_free_port
@@ -42,7 +43,6 @@ class PageManager[StateT: StateBase]:
         self.state = state
         self.page_count: int = 0
         self.page_tasks: list[asyncio.Task] = []
-        self.background_tasks: list[asyncio.Task] = []
         self.loop = asyncio.new_event_loop()
         self.executor = ThreadPoolExecutor()
 
@@ -80,16 +80,10 @@ class PageManager[StateT: StateBase]:
                         self.page_tasks.remove(task)
                         await task
 
-                for task in self.background_tasks:
-                    if task.done():
-                        self.background_tasks.remove(task)
-                        await task
-
             except KeyboardInterrupt:
                 break
 
         await self.cancel_tasks(self.page_tasks)
-        await self.cancel_tasks(self.background_tasks)
         self.logger.info("PageManager: All tasks have been canceled, exiting...")
 
     def open_page(self, name: str, *, port: int = 0):
@@ -101,8 +95,7 @@ class PageManager[StateT: StateBase]:
         logger.info(f"PageManager: Opening page `{name}` on port {port}")
         page_obj = PageManager.page_mapping[name]()
         self.page_count += 1
-
-        task = asyncio.create_task(
+        task = self.loop.create_task(
             ft.app_async(
                 target=partial(page_obj, pm=self),
                 view=self.view,
@@ -115,15 +108,33 @@ class PageManager[StateT: StateBase]:
     async def restart(self, name: str, *, port: int = 0):
         # TODO
         await self.cancel_tasks(self.page_tasks)
-        await self.cancel_tasks(self.background_tasks)
         self.page_count = 0
         self.page_tasks = []
-        self.background_tasks = []
         await self.run(name, port=port)
 
-    async def start(self, name: str, *, port: int = 0):
-        # TODO
-        await self.run(name, port=port)
+    async def check_page_count(self):
+        while self.page_count > 0:
+            try:
+                for task in self.page_tasks:
+                    await asyncio.sleep(0.1)
+                    if task.done():
+                        self.page_count -= 1
+                        self.page_tasks.remove(task)
+            except KeyboardInterrupt:
+                break
+        self.loop.stop()
+        self.logger.info("PageManager: Event loop stopped, exiting...")
+
+    def start(self, name: str, *, port: int = 0):
+        while True:
+            self.open_page(name, port=port)
+            self.loop.create_task(self.check_page_count())
+            try:
+                self.loop.run_forever()
+                break
+            except PageRestartException:
+                self.loop.stop()
+        self.loop.close()
 
     async def close(self):
         # TODO
