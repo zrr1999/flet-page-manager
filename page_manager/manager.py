@@ -42,7 +42,8 @@ class PageManager[StateT: StateBase]:
     ) -> None:
         self.state = state
         self.page_count: int = 0
-        self.page_tasks: list[asyncio.Task] = []
+        self.page_tasks: list[asyncio.Task[Any]] = []
+        self.backgroud_tasks: list[asyncio.Task[Any]] = []
         self.loop = asyncio.new_event_loop()
         self.executor = ThreadPoolExecutor()
 
@@ -51,12 +52,14 @@ class PageManager[StateT: StateBase]:
 
     def run_task[OutputT](self, handler: Callable[..., Awaitable[OutputT]], *args):
         assert asyncio.iscoroutinefunction(handler)
-        return asyncio.run_coroutine_threadsafe(handler(*args), self.loop)
+        task = self.loop.create_task(handler(*args))
+        self.backgroud_tasks.append(task)
+        return task
 
     def run_thread(self, handler: Callable[..., Any], *args):
         self.loop.call_soon_threadsafe(self.loop.run_in_executor, self.executor, handler, *args)
 
-    async def cancel_tasks(self, tasks: list[asyncio.Task]):
+    async def cancel_tasks(self, tasks: list[asyncio.Task[Any]]):
         for task in tasks:
             if not task.done():
                 try:
@@ -122,6 +125,8 @@ class PageManager[StateT: StateBase]:
                         self.page_tasks.remove(task)
             except KeyboardInterrupt:
                 break
+        await self.cancel_tasks(self.page_tasks)
+        await self.cancel_tasks(self.backgroud_tasks)
         self.loop.stop()
         self.logger.info("PageManager: Event loop stopped, exiting...")
 
