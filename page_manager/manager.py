@@ -2,15 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import sys
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from functools import partial
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, Sequence
 
 import flet as ft
 from flet import AppView
 from loguru import logger
 
-from .exception import PageRestartException
 from .pages import PageBase
 from .state import StateBase
 from .utils import get_free_port
@@ -21,8 +20,10 @@ class PageManager[StateT: StateBase]:
     page_mapping: dict[str, type[PageBase]] = {}
 
     @staticmethod
-    def register_page(name: str | None = None):
-        def _register_page(page_cls: type[PageBase]):
+    def register_page(
+        name: str | None = None,
+    ) -> Callable[[type[PageBase[StateT]]], type[PageBase[StateT]]]:
+        def _register_page(page_cls: type[PageBase[StateT]]) -> type[PageBase[StateT]]:
             PageManager.page_mapping[name or page_cls.__name__] = page_cls
             return page_cls
 
@@ -41,53 +42,63 @@ class PageManager[StateT: StateBase]:
         assets_dir: str = "public",
     ) -> None:
         self.state = state
-        self.page_count: int = 0
-        self.page_tasks: list[asyncio.Task[Any]] = []
-        self.backgroud_tasks: list[asyncio.Task[Any]] = []
-        self.loop = asyncio.new_event_loop()
-        self.executor = ThreadPoolExecutor()
-
         self.view = view
         self.assets_dir = assets_dir
 
-    def run_task[OutputT](self, handler: Callable[..., Awaitable[OutputT]], *args):
+        self.page_count: int = 0
+        self.page_tasks: list[asyncio.Task[Any]] = []
+        self.backgroud_futures: list[Future[Any]] = []
+        self.loop = asyncio.new_event_loop()
+        self.executor = ThreadPoolExecutor()
+        self.need_restart = False
+
+    def run_task[**InputT, RetT](
+        self,
+        handler: Callable[InputT, Awaitable[RetT]],
+        *args: InputT.args,
+        **kwargs: InputT.kwargs,
+    ) -> Future[RetT]:
         assert asyncio.iscoroutinefunction(handler)
-        task = self.loop.create_task(handler(*args))
-        self.backgroud_tasks.append(task)
+        task = asyncio.run_coroutine_threadsafe(handler(*args, **kwargs), self.loop)
+        self.backgroud_futures.append(task)
         return task
 
-    def run_thread(self, handler: Callable[..., Any], *args):
-        self.loop.call_soon_threadsafe(self.loop.run_in_executor, self.executor, handler, *args)
+    def run_thread[**InputT](
+        self, handler: Callable[InputT, Any], *args: InputT.args, **kwargs: InputT.kwargs
+    ):
+        self.loop.call_soon_threadsafe(
+            self.loop.run_in_executor, self.executor, partial(handler, *args, **kwargs)
+        )
 
-    async def cancel_tasks(self, tasks: list[asyncio.Task[Any]]):
+    async def cancel_tasks(self, tasks: Sequence[asyncio.Task[Any]]):
         for task in tasks:
             if not task.done():
-                try:
-                    task.cancel()
-                    try:
-                        await task
-                    except asyncio.CancelledError:
-                        pass
-                    self.logger.info("PageManager: Task canceled")
-                except Exception as e:
-                    self.logger.error(f"PageManager: Error canceling task - {e}")
+                task.cancel()
+                self.logger.info(f"PageManager: Task {task.get_name()} canceled")
+                await task
 
-    async def run(self, name: str, *, port: int = 0):
-        self.open_page(name, port=port)
-        while self.page_count > 0:
-            try:
+    async def cancel_futures(self, futures: Sequence[Future[Any]]):
+        wrapped_tasks: list[asyncio.Task[Any] | asyncio.Future[Any]] = []
+
+        for future in futures:
+            if not future.done():
+                future.cancel()
+                self.logger.info("PageManager: Future canceled")
+                wrapped_tasks.append(asyncio.wrap_future(future))
+
+        await asyncio.gather(*wrapped_tasks, return_exceptions=True)
+
+    async def check_page_count(self):
+        while self.page_count > 0 and not self.need_restart:
+            for task in self.page_tasks:
                 await asyncio.sleep(0.1)
-                for task in self.page_tasks:
-                    if task.done():
-                        self.page_count -= 1
-                        self.page_tasks.remove(task)
-                        await task
-
-            except KeyboardInterrupt:
-                break
-
+                if task.done():
+                    self.page_count -= 1
+                    self.page_tasks.remove(task)
         await self.cancel_tasks(self.page_tasks)
-        self.logger.info("PageManager: All tasks have been canceled, exiting...")
+        await self.cancel_futures(self.backgroud_futures)
+        self.loop.stop()
+        self.logger.info("PageManager: Event loop stopped, exiting...")
 
     def open_page(self, name: str, *, port: int = 0):
         if name not in PageManager.page_mapping:
@@ -108,37 +119,20 @@ class PageManager[StateT: StateBase]:
         )
         self.page_tasks.append(task)
 
-    async def restart(self, name: str, *, port: int = 0):
-        # TODO
-        await self.cancel_tasks(self.page_tasks)
-        self.page_count = 0
-        self.page_tasks = []
-        await self.run(name, port=port)
-
-    async def check_page_count(self):
-        while self.page_count > 0:
-            try:
-                for task in self.page_tasks:
-                    await asyncio.sleep(0.1)
-                    if task.done():
-                        self.page_count -= 1
-                        self.page_tasks.remove(task)
-            except KeyboardInterrupt:
-                break
-        await self.cancel_tasks(self.page_tasks)
-        await self.cancel_tasks(self.backgroud_tasks)
-        self.loop.stop()
-        self.logger.info("PageManager: Event loop stopped, exiting...")
+    def restart(self):
+        self.need_restart = True
 
     def start(self, name: str, *, port: int = 0):
         while True:
             self.open_page(name, port=port)
             self.loop.create_task(self.check_page_count())
-            try:
-                self.loop.run_forever()
+            self.loop.run_forever()
+            if not self.need_restart:
                 break
-            except PageRestartException:
-                self.loop.stop()
+            logger.info("PageManager: Restarting...")
+            # TODO: port should be reused, but port already in use
+            port = get_free_port()
+            self.need_restart = False
         self.loop.close()
 
     async def close(self):

@@ -7,7 +7,7 @@ authors = [
     {name = "Zhan Rongrui", email = "2742392377@qq.com"},
 ]
 dependencies = [
-    "flet>=0.21.2",
+    "flet>=0.22.1",
     "loguru>=0.7.2",
     "pydantic>=2.0.0"
 ]
