@@ -98,6 +98,8 @@ class PageManager[StateT: StateBase]:
                     self.page_count -= 1
                     self.page_tasks.remove(task)
         await self.cancel_tasks(asyncio.all_tasks() - {asyncio.current_task()})
+        self.executor.shutdown(cancel_futures=True)
+        self.executor = ThreadPoolExecutor()
         self.logger.info("PageManager: Event loop stopped, exiting...")
 
     def open_page(self, name: str, *, port: int = 0):
