@@ -1,15 +1,19 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v4.6.0
     hooks:
-      - id: check-case-conflict
+      - id: check-added-large-files
+      - id: check-yaml
       - id: check-json
       - id: check-toml
-      - id: check-yaml
-      - id: fix-byte-order-marker
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.3.5
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.8
     hooks:
-    - id: ruff
-      args: [--fix, --exit-non-zero-on-fix, --no-cache]
-    - id: ruff-format
+      - id: ruff-format
+      - id: ruff
+        args: [--fix, --unsafe-fixes, --exit-non-zero-on-fix]
